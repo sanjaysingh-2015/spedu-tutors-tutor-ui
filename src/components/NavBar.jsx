@@ -52,7 +52,7 @@ export default function NavBar() {
               <span>Profile</span>
             </Link>
 
-            <Link to="/levels" className={`${commonCircle} bg-yellow-100 text-yellow-700 hover:bg-yellow-200`}>
+            <Link to="/banks" className={`${commonCircle} bg-yellow-100 text-yellow-700 hover:bg-yellow-200`}>
               <BuildingLibraryIcon className="w-6 h-6" />
               <span>Banks</span>
             </Link>

@@ -21,7 +21,7 @@ export const updateBank = (payload) =>
   api.put(`/api/tutors/me/bank`, payload);
 export const getBank = (id) => api.get(`/api/tutors/me/bank/${id}`);
 export const getPrimaryBank = (id) => api.get(`/api/tutors/me/bank-primary`);
-
+export const searchBanks = (param) => api.get(`/api/tutors/me/bank/search?${param}`);
 // --- Fees ---
 export const getFees = () => api.get("/api/tutors/me/fees");
 export const addFee = (payload) => api.post("/api/tutors/me/fees", payload);
