@@ -10,3 +10,8 @@ export const searchBankDetails = (param) => api.get(`/api/banks/search?${param}`
 export const createBankDetail = (payload) => api.post(`/api/banks`, payload);
 export const updateBankDetail = (id,payload) => api.put(`/api/banks/${id}`, payload);
 export const deleteBankDetail = id => api.delete(`/api/banks/${id}`);
+
+export const getAvailability = () => api.get(`/api/availabilities`);
+export const saveAvailability = (payload) => api.post(`api/availabilities`, payload);
+export const updateAvailability = (id, payload) => api.put(`api/availabilities/${id}`, payload);
+export const deleteAvailability = (id, payload) => api.delete(`api/availabilities/${id}`);

@@ -4,6 +4,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import ProfileTabs from "./pages/ProfileTabs";
+import AvailabilityCalendar from "./pages/AvailabilityCalendar";
 import Banks from "./pages/Banks";
 
 export default function App() {
@@ -18,6 +19,7 @@ export default function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<ProfileTabs />} />
             <Route path="/banks" element={<Banks />} />
+            <Route path="/availability" element={<AvailabilityCalendar />} />
           </Routes>
         </div>
       </div>

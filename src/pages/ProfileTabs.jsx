@@ -2,8 +2,10 @@ import React, { useEffect, useState } from "react";
 import Layout from "../components/Layout";
 import { createProfile, updateProfile, uploadResume, addBank, updateBank, getSteps, getProfile, getResume, getBank, getPrimaryBank } from "../services/tutorService";
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
+import { useMessages } from "../context/MessageContext";
 
 export default function ProfileTabs() {
+  const { addMessage } = useMessages();
   const steps = [
     { id: "personal", label: "Personal Info" },
     { id: "resume", label: "Resume" },
@@ -34,7 +36,7 @@ export default function ProfileTabs() {
         setForm(profileData.data);
 
       } catch (err) {
-        console.error("Error fetching steps or profile:", err);
+        addMessage("Error fetching steps or profile", "error");
       }
     };
     init();
@@ -53,7 +55,7 @@ export default function ProfileTabs() {
           setBankForm(bankData.data);
         }
       } catch (err) {
-        console.error("Failed to fetch data for tab", tab, err);
+        addMessage("Failed to fetch data for tab "+ tab, "error");
       }
     };
     fetchTabData();
@@ -82,7 +84,7 @@ export default function ProfileTabs() {
       setTab("resume");
       updateStepStatus("resume", "INPROGRESS");
     } catch (err) {
-      alert("Failed to save personal info");
+      addMessage("Failed to save personal info", "error");
     }
   };
 
@@ -93,7 +95,7 @@ export default function ProfileTabs() {
       setTab("bank");
       updateStepStatus("bank", "INPROGRESS");
     } catch (err) {
-      alert("Failed to upload resume");
+      addMessage("Failed to upload resume", "error");
     }
   };
 
@@ -106,9 +108,9 @@ export default function ProfileTabs() {
         await addBank(bankForm);
       }
       updateStepStatus("bank", "COMPLETED");
-      alert("Profile completed 🎉");
+      addMessage("Profile completed 🎉", "success");
     } catch (err) {
-      alert("Failed to save bank details");
+      addMessage("Failed to save bank details", "error");
     }
   };
 
