@@ -9,6 +9,7 @@ import {
   saveAvailability,
   updateAvailability,
   deleteAvailability,
+  getTutorHolidays, // ✅ add this in your otherService
 } from "../services/otherService";
 import { useMessages } from "../context/MessageContext";
 
@@ -31,7 +32,7 @@ function formatLocalDate(date) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 function formatLocalTime(date) {
-  return date.toTimeString().split(" ")[0]; // HH:mm:ss
+  return date.toTimeString().split(" ")[0];
 }
 
 /**
@@ -42,17 +43,23 @@ export default function AvailabilityCalendar() {
   const calendarRef = useRef(null);
 
   const [events, setEvents] = useState([]);
+  const [holidays, setHolidays] = useState([]); // ✅ holidays state
   const [view, setView] = useState("timeGridWeek");
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState({ open: false, mode: "create", event: null });
 
-  // Fetch availability
+  // Fetch availability & holidays
   useEffect(() => {
-    const fetch = async () => {
+    const fetchAll = async () => {
       setLoading(true);
       try {
-        const res = await getAvailability();
-        const mapped = res.data.map((slot) => {
+        const [availabilityRes, holidaysRes] = await Promise.all([
+          getAvailability(),
+          getTutorHolidays(),
+        ]);
+
+        // ✅ Map availability
+        const mappedAvailability = availabilityRes.data.map((slot) => {
           const showDate = slot.eventDate;
           return {
             id: `${slot.eventId}::${slot.id}`,
@@ -75,20 +82,46 @@ export default function AvailabilityCalendar() {
                 : "gray",
           };
         });
-        setEvents(mapped);
+
+        // ✅ Map holidays
+        const mappedHolidays = holidaysRes.data
+          .filter((h) => h.status === "ACTIVE")
+          .map((h) => ({
+            id: `holiday-${h.id}`,
+            title: h.name || "Holiday",
+            start: h.startDate,
+            end: new Date(new Date(h.endDate).getTime() + 86400000), // include end date
+            display: "background", // ✅ background block
+            color: "rgba(60, 60, 60, 0.85)", // light red background
+            extendedProps: { isHoliday: true, ...h },
+          }));
+
+        setEvents(mappedAvailability);
+        setHolidays(mappedHolidays);
       } catch (err) {
-        addMessage("Failed to load availability", "error");
+        console.error(err);
+        addMessage("Failed to load availability or holidays", "error");
       } finally {
         setLoading(false);
       }
     };
-    fetch();
+    fetchAll();
   }, [addMessage]);
 
   /**
    * Calendar Handlers
    */
   const handleDateSelect = (selectInfo) => {
+    const isHoliday = holidays.some(
+      (h) =>
+        new Date(selectInfo.start) >= new Date(h.start) &&
+        new Date(selectInfo.start) <= new Date(h.end)
+    );
+    if (isHoliday) {
+      addMessage("Cannot create availability on a holiday!", "warning");
+      return;
+    }
+
     setModal({
       open: true,
       mode: "create",
@@ -103,6 +136,9 @@ export default function AvailabilityCalendar() {
 
   const handleEventClick = (clickInfo) => {
     const ev = clickInfo.event;
+    // ✅ Prevent editing holidays
+    if (ev.extendedProps?.isHoliday) return;
+
     setModal({
       open: true,
       mode: "edit",
@@ -120,6 +156,10 @@ export default function AvailabilityCalendar() {
 
   const handleEventChange = async (changeInfo) => {
     const { event } = changeInfo;
+    if (event.extendedProps?.isHoliday) {
+      changeInfo.revert();
+      return;
+    }
     try {
       await updateAvailability(event.extendedProps.eventId, {
         dayOfWeek: dayOfWeekFromDate(event.start),
@@ -137,7 +177,7 @@ export default function AvailabilityCalendar() {
   };
 
   /**
-   * Slot Modal
+   * Slot Modal (unchanged)
    */
   const SlotModal = ({ modal, onClose }) => {
     if (!modal.open) return null;
@@ -295,7 +335,7 @@ export default function AvailabilityCalendar() {
     );
   };
 
-  // 🔹 Custom View Switch Buttons
+  // Custom View Switch Buttons
   const changeView = (newView) => {
     setView(newView);
     const calendarApi = calendarRef.current?.getApi();
@@ -306,7 +346,6 @@ export default function AvailabilityCalendar() {
     <div className="p-4">
       <h2 className="text-xl font-bold mb-4">Set Your Availability</h2>
 
-      {/* Custom View Toolbar */}
       <div className="flex justify-end mb-2 space-x-2">
         <button
           className={`px-3 py-1 border rounded ${
@@ -348,14 +387,14 @@ export default function AvailabilityCalendar() {
           selectMirror={true}
           timeZone="local"
           select={handleDateSelect}
-          events={events}
+          events={[...events, ...holidays]} // ✅ combine both
           editable={true}
           eventResizableFromStart={true}
           eventClick={handleEventClick}
           eventChange={handleEventChange}
           height="75vh"
           allDaySlot={false}
-          slotDuration={{ minutes: 15 }}
+          slotDuration={{ minutes: 30 }}
         />
       </div>
 

@@ -15,3 +15,4 @@ export const getAvailability = () => api.get(`/api/availabilities`);
 export const saveAvailability = (payload) => api.post(`api/availabilities`, payload);
 export const updateAvailability = (id, payload) => api.put(`api/availabilities/${id}`, payload);
 export const deleteAvailability = (id, payload) => api.delete(`api/availabilities/${id}`);
+export const getTutorHolidays = () => api.get(`/api/holidays/active`);
