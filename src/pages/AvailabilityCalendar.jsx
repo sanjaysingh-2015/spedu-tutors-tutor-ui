@@ -47,9 +47,11 @@ export default function AvailabilityCalendar() {
   const [view, setView] = useState("timeGridWeek");
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState({ open: false, mode: "create", event: null });
+  const [userName, setUserName] = useState("");
 
   // Fetch availability & holidays
   useEffect(() => {
+    setUserName(localStorage.getItem("loggedInUser"));
     const fetchAll = async () => {
       setLoading(true);
       try {
@@ -344,7 +346,7 @@ export default function AvailabilityCalendar() {
 
   return (
     <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">Set Your Availability</h2>
+      <h2 className="text-xl font-bold mb-4">{userName}'s define slot availability</h2>
 
       <div className="flex justify-end mb-2 space-x-2">
         <button
