@@ -8,7 +8,10 @@ import {
   BuildingLibraryIcon,
   CurrencyDollarIcon,
   CalendarDaysIcon,
-  ClockIcon
+  ClockIcon,
+  DocumentTextIcon,
+  ClipboardDocumentIcon,
+  MapPinIcon
 } from '@heroicons/react/24/outline'
 
 export default function NavBar() {
@@ -50,6 +53,16 @@ export default function NavBar() {
             <Link to="/profile" className={`${commonCircle} bg-blue-100 text-blue-700 hover:bg-blue-200`}>
               <UserIcon className="w-6 h-6" />
               <span>Profile</span>
+            </Link>
+
+            <Link to="/addresses" className={`${commonCircle} bg-orange-100 text-orange-700 hover:bg-orange-200`}>
+              <MapPinIcon className="w-6 h-6" />
+              <span>Add</span>
+            </Link>
+
+            <Link to="/documents" className={`${commonCircle} bg-zinc-100 text-zinc-700 hover:bg-zinc-200`}>
+              <DocumentTextIcon className="w-6 h-6" />
+              <span>Docs</span>
             </Link>
 
             <Link to="/banks" className={`${commonCircle} bg-yellow-100 text-yellow-700 hover:bg-yellow-200`}>

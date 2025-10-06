@@ -1,6 +1,33 @@
 import React, { useEffect, useState } from "react";
 import Layout from "../components/Layout";
-import { createProfile, updateProfile, uploadResume, addBank, updateBank, getSteps, getProfile, getResume, getBank, getPrimaryBank } from "../services/tutorService";
+import {
+    createProfile,
+    updateProfile,
+    uploadResume,
+    addBank,
+    updateBank,
+    getSteps,
+    getProfile,
+    getResume,
+    getBank,
+    getPrimaryBank,
+} from "../services/tutorService";
+
+import {
+    getCountries,
+
+    getTutorAddresses,
+    createTutorAddress,
+    updateTutorAddress,
+
+    getTutorDocuments,
+    createTutorDocument,
+    updateTutorDocument,
+
+    getDocuments,
+    getDocumentCategories
+} from "../services/otherService";
+
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
 import { useMessages } from "../context/MessageContext";
 
@@ -8,6 +35,8 @@ export default function ProfileTabs() {
   const { addMessage } = useMessages();
   const steps = [
     { id: "personal", label: "Personal Info" },
+    { id: "address", label: "Address Info" },
+    { id: "document", label: "Uploaded Documents" },
     { id: "resume", label: "Resume" },
     { id: "bank", label: "Bank Details" },
   ];
@@ -17,6 +46,11 @@ export default function ProfileTabs() {
   const [form, setForm] = useState({ firstName: "", middleName: "", lastName: "", bio: "", skills: "" });
   const [resumeForm, setResumeForm] = useState({resumeUrl: ""});
   const [bankForm, setBankForm] = useState({ accountHolderName: "", bankName: "", accountNumber: "", ifscCode: "", upiId: "", primaryAccount: false });
+  const [addressForm, setAddressForm] = useState({ tutorCode: "", addressType: "", addressLine1: "", addressLine2: "", addressLine3: "", city: "", state: "", countryCode: "", zipCode: "", correspondingAddress: false });
+  const [documentForm, setDocumentForm] = useState({ documentCategoryCode: "", documentCode: "", tutorCode: "", documentNumber: "", documentFileUrl: ""});
+  const [countries, setCountries] = useState([]);
+  const [documentCategories, setDocumentCategories] = useState([]);
+  const [documents, setDocuments] = useState([]);
   const [file, setFile] = useState(null);
   const [userName, setUserName] = useState("");
 
@@ -31,10 +65,23 @@ export default function ProfileTabs() {
         // fetch onboarding steps
         const stepsRes = await getSteps();
         setStepsStatus(stepsRes.data);
+        console.log(stepsStatus);
+        // fetch countries
+        const countryRes = await getCountries();
+        setCountries(countryRes.data);
+        console.log(countries);
         // preload data for first tab
         const profileData = await getProfile();
         setForm(profileData.data);
-
+        console.log(form);
+        // fetch categories
+        const catRes = await getDocumentCategories();
+        setDocumentCategories(catRes.data);
+        console.log(documentCategories);
+        // fetch documents
+        const docRes = await getDocuments();
+        setDocuments(docRes.data);
+        console.log(documents);
       } catch (err) {
         addMessage("Error fetching steps or profile", "error");
       }
@@ -53,6 +100,12 @@ export default function ProfileTabs() {
         } else if (tab === "bank") {
           const bankData = await getPrimaryBank();
           setBankForm(bankData.data);
+        } else if (tab === "address") {
+          const addressData = await getTutorAddresses();
+          setAddressForm(addressData.data[0]);
+        } else if(tab === "document") {
+          const documentData = await getTutorDocuments();
+          setDocumentForm(documentData.data[0]);
         }
       } catch (err) {
         addMessage("Failed to fetch data for tab "+ tab, "error");
@@ -81,13 +134,42 @@ export default function ProfileTabs() {
         await createProfile(form);
       }
       updateStepStatus("personal", "COMPLETED");
-      setTab("resume");
-      updateStepStatus("resume", "INPROGRESS");
+      setTab("address");
+      updateStepStatus("address", "INPROGRESS");
     } catch (err) {
       addMessage("Failed to save personal info", "error");
     }
   };
 
+  const handleAddressNext = async () => {
+    try {
+      if (getStepStatus("address") === "COMPLETED") {
+        await updateTutorAddress(addressForm);
+      } else {
+        await createTutorAddress(addressForm);
+      }
+      updateStepStatus("address", "COMPLETED");
+      setTab("document");
+      updateStepStatus("document", "INPROGRESS");
+    } catch (err) {
+      addMessage("Failed to save address info", "error");
+    }
+  };
+
+  const handleDocumentNext = async () => {
+    try {
+      if (getStepStatus("document") === "COMPLETED") {
+        await updateTutorDocument(documentForm);
+      } else {
+        await createTutorDocument(documentForm);
+      }
+      updateStepStatus("document", "COMPLETED");
+      setTab("resume");
+      updateStepStatus("resume", "INPROGRESS");
+    } catch (err) {
+      addMessage("Failed to save document info", "error");
+    }
+  };
   const handleResumeNext = async () => {
     try {
       if (file) await uploadResume(file);
@@ -182,6 +264,106 @@ export default function ProfileTabs() {
             onChange={(e) => setForm({ ...form, skills: e.target.value })}
             className="border rounded p-2 mb-2 block w-full" />
           <button onClick={handlePersonalNext} className="bg-blue-600 text-white px-6 py-2 rounded-md shadow hover:bg-blue-700 transition">Next →</button>
+        </div>
+      )}
+
+      {tab === "address" && (
+        <div>
+          <select
+            className="border rounded p-2 mb-2 block w-full"
+            value={addressForm.addressType}
+            onChange={e => setAddressForm({ ...addressForm, addressType: e.target.value })}
+          >
+            <option value="">All Address Types</option>
+            <option key="HOME" value="HOME">Home</option>
+            <option key="OFFICE" value="OFFICE">Office</option>
+            <option key="OTHERS" value="OTHERS">Others</option>
+          </select>
+          <input type="text" placeholder="Address Line#1" value={addressForm.addressLine1}
+            onChange={(e) => setAddressForm({ ...addressForm, addressLine1: e.target.value })}
+            className="border rounded p-2 mb-2 block w-full" />
+          <input type="text" placeholder="Address Line#2" value={addressForm.addressLine2}
+            onChange={(e) => setAddressForm({ ...addressForm, addressLine2: e.target.value })}
+            className="border rounded p-2 mb-2 block w-full" />
+          <input type="text" placeholder="Address Line#3" value={addressForm.addressLine3}
+            onChange={(e) => setAddressForm({ ...addressForm, addressLine3: e.target.value })}
+            className="border rounded p-2 mb-2 block w-full" />
+          <input type="text" placeholder="City" value={addressForm.city}
+            onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
+            className="border rounded p-2 mb-2 block w-full" />
+          <input type="text" placeholder="State" value={addressForm.state}
+            onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })}
+            className="border rounded p-2 mb-2 block w-full" />
+          <select
+            className="border rounded p-2 mb-2 block w-full"
+            value={addressForm.countryCode}
+            onChange={e => setAddressForm({ ...addressForm, countryCode: e.target.value })}
+          >
+            <option value="">All Countries</option>
+            {countries.map(l => (
+              <option key={l.code} value={l.code}>{l.name}</option>
+            ))}
+          </select>
+          <input type="text" placeholder="Zip Code" value={addressForm.zipCode}
+            onChange={(e) => setAddressForm({ ...addressForm, zipCode: e.target.value })}
+            className="border rounded p-2 mb-2 block w-full" />
+          <label className="flex items-center space-x-2 mb-2">
+            <input type="checkbox" checked={addressForm.correspondingAddress}
+              onChange={(e) => setAddressForm({ ...addressForm, correspondingAddress: e.target.checked })}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+            <span className="text-sm text-gray-700">Primary Account</span>
+          </label>
+          <button onClick={handleAddressNext} className="bg-blue-600 text-white px-6 py-2 rounded-md shadow hover:bg-blue-700 transition">Next →</button>
+        </div>
+      )}
+
+      {tab === "document" && (
+        <div>
+          <select
+            className="border rounded p-2 mb-2 block w-full"
+            value={documentForm.documentCategoryCode}
+            onChange={e => setAddressForm({ ...documentForm, documentCategoryCode: e.target.value })}
+          >
+            <option value="">All Category</option>
+            {documentCategories.map(l => (
+              <option key={l.code} value={l.code}>{l.name}</option>
+            ))}
+          </select>
+          <input type="text" placeholder="Address Line#1" value={addressForm.addressLine1}
+            onChange={(e) => setAddressForm({ ...addressForm, addressLine1: e.target.value })}
+            className="border rounded p-2 mb-2 block w-full" />
+          <input type="text" placeholder="Address Line#2" value={addressForm.addressLine2}
+            onChange={(e) => setAddressForm({ ...addressForm, addressLine2: e.target.value })}
+            className="border rounded p-2 mb-2 block w-full" />
+          <input type="text" placeholder="Address Line#3" value={addressForm.addressLine3}
+            onChange={(e) => setAddressForm({ ...addressForm, addressLine3: e.target.value })}
+            className="border rounded p-2 mb-2 block w-full" />
+          <input type="text" placeholder="City" value={addressForm.city}
+            onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
+            className="border rounded p-2 mb-2 block w-full" />
+          <input type="text" placeholder="State" value={addressForm.state}
+            onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })}
+            className="border rounded p-2 mb-2 block w-full" />
+          <select
+            className="border rounded p-2 mb-2 block w-full"
+            value={addressForm.countryCode}
+            onChange={e => setAddressForm({ ...addressForm, countryCode: e.target.value })}
+          >
+            <option value="">All Countries</option>
+            {countries.map(l => (
+              <option key={l.code} value={l.code}>{l.name}</option>
+            ))}
+          </select>
+          <input type="text" placeholder="Zip Code" value={addressForm.zipCode}
+            onChange={(e) => setAddressForm({ ...addressForm, zipCode: e.target.value })}
+            className="border rounded p-2 mb-2 block w-full" />
+          <label className="flex items-center space-x-2 mb-2">
+            <input type="checkbox" checked={addressForm.correspondingAddress}
+              onChange={(e) => setAddressForm({ ...addressForm, correspondingAddress: e.target.checked })}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+            <span className="text-sm text-gray-700">Primary Account</span>
+          </label>
+          <button onClick={handleAddressNext} className="bg-blue-600 text-white px-6 py-2 rounded-md shadow hover:bg-blue-700 transition">Next →</button>
         </div>
       )}
 

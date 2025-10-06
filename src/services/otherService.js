@@ -16,3 +16,19 @@ export const saveAvailability = (payload) => api.post(`api/availabilities`, payl
 export const updateAvailability = (id, payload) => api.put(`api/availabilities/${id}`, payload);
 export const deleteAvailability = (id, payload) => api.delete(`api/availabilities/${id}`);
 export const getTutorHolidays = () => api.get(`/api/holidays/active`);
+
+export const getCountries = () => api.get('/api/master/countries');
+export const getDocumentCategories = () => api.get('/api/master/document-categories');
+export const getDocuments = () => api.get('/api/master/documents');
+
+export const getTutorDocuments = () => api.get(`/api/documents`);
+export const searchTutorDocuments = (param) => api.get(`/api/documents/search?${param}`);
+export const createTutorDocument = payload => api.post(`/api/documents`, payload);
+export const updateTutorDocument = (id, payload) => api.put(`/api/documents/${id}`, payload);
+export const deleteTutorDocument = id => api.delete(`/api/documents/${id}`);
+
+export const getTutorAddresses = () => api.get(`/api/addresses`);
+export const searchTutorAddresses = (param) => api.get(`/api/addresses/search?${param}`);
+export const createTutorAddress = payload => api.post(`/api/addresses`, payload);
+export const updateTutorAddress = (id, payload) => api.put(`/api/addresses/${id}`, payload);
+export const deleteTutorAddress = id => api.delete(`/api/addresses/${id}`);

@@ -6,6 +6,8 @@ import Dashboard from "./pages/Dashboard";
 import ProfileTabs from "./pages/ProfileTabs";
 import AvailabilityCalendar from "./pages/AvailabilityCalendar";
 import Banks from "./pages/Banks";
+import Addresses from "./pages/Addresses";
+import Documents from "./pages/Documents";
 
 export default function App() {
   return (
@@ -19,6 +21,8 @@ export default function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<ProfileTabs />} />
             <Route path="/banks" element={<Banks />} />
+            <Route path="/addresses" element={<Addresses />} />
+            <Route path="/documents" element={<Documents />} />
             <Route path="/availability" element={<AvailabilityCalendar />} />
           </Routes>
         </div>
