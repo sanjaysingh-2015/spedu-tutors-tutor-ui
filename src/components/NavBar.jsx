@@ -19,6 +19,7 @@ export default function NavBar() {
   const userRole = localStorage.getItem("userRole");
   const loginAt = localStorage.getItem("loginAt");
   const loggedInUser = localStorage.getItem("loggedInUser");
+  const profileCompleted = localStorage.getItem('profileCompleted')
   const initials = loggedInUser
     ? loggedInUser
         .split(" ")
@@ -54,36 +55,38 @@ export default function NavBar() {
               <UserIcon className="w-6 h-6" />
               <span>Profile</span>
             </Link>
+            {profileCompleted === true ? (
+              <>
+                <Link to="/addresses" className={`${commonCircle} bg-orange-100 text-orange-700 hover:bg-orange-200`}>
+                  <MapPinIcon className="w-6 h-6" />
+                  <span>Add</span>
+                </Link>
 
-            <Link to="/addresses" className={`${commonCircle} bg-orange-100 text-orange-700 hover:bg-orange-200`}>
-              <MapPinIcon className="w-6 h-6" />
-              <span>Add</span>
-            </Link>
+                <Link to="/documents" className={`${commonCircle} bg-zinc-100 text-zinc-700 hover:bg-zinc-200`}>
+                  <DocumentTextIcon className="w-6 h-6" />
+                  <span>Docs</span>
+                </Link>
 
-            <Link to="/documents" className={`${commonCircle} bg-zinc-100 text-zinc-700 hover:bg-zinc-200`}>
-              <DocumentTextIcon className="w-6 h-6" />
-              <span>Docs</span>
-            </Link>
+                <Link to="/banks" className={`${commonCircle} bg-yellow-100 text-yellow-700 hover:bg-yellow-200`}>
+                  <BuildingLibraryIcon className="w-6 h-6" />
+                  <span>Banks</span>
+                </Link>
 
-            <Link to="/banks" className={`${commonCircle} bg-yellow-100 text-yellow-700 hover:bg-yellow-200`}>
-              <BuildingLibraryIcon className="w-6 h-6" />
-              <span>Banks</span>
-            </Link>
+                <Link to="/fees" className={`${commonCircle} bg-green-100 text-green-700 hover:bg-green-200`}>
+                  <CurrencyDollarIcon className="w-6 h-6" />
+                  <span>Fees</span>
+                </Link>
 
-            <Link to="/fees" className={`${commonCircle} bg-green-100 text-green-700 hover:bg-green-200`}>
-              <CurrencyDollarIcon className="w-6 h-6" />
-              <span>Fees</span>
-            </Link>
+                <Link to="/availability" className={`${commonCircle} bg-purple-100 text-purple-700 hover:bg-purple-200`}>
+                  <CalendarDaysIcon className="w-6 h-6" />
+                  <span>Slot</span>
+                </Link>
 
-            <Link to="/availability" className={`${commonCircle} bg-purple-100 text-purple-700 hover:bg-purple-200`}>
-              <CalendarDaysIcon className="w-6 h-6" />
-              <span>Slot</span>
-            </Link>
-
-            <Link to="/metrics" className={`${commonCircle} bg-pink-100 text-pink-700 hover:bg-pink-200`}>
-              <ClockIcon className="w-6 h-6" />
-              <span>Sessions</span>
-            </Link>
+                <Link to="/metrics" className={`${commonCircle} bg-pink-100 text-pink-700 hover:bg-pink-200`}>
+                  <ClockIcon className="w-6 h-6" />
+                  <span>Sessions</span>
+                </Link>
+              </>) : <></>}
           </div>
         )}
       </div>
