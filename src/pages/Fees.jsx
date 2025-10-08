@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from 'react'
-import { createBankDetail, updateBankDetail, searchBankDetails, getBankDetails, deleteBankDetail } from "../services/otherService";
+import {
+  getTutorFeeStructures,
+  searchTutorFeeStructures,
+  createTutorFeeStructure,
+  updateTutorFeeStructure,
+  deleteTutorFeeStructure,
+  getLevels,
+} from '../services/otherService'
 import Modal from '../components/Modal'
 
 import {
@@ -13,19 +20,22 @@ import {
   ChevronRightIcon
 } from "@heroicons/react/24/outline";
 
-export default function Banks() {
-  const [banks, setBanks] = useState([])
+export default function Fees() {
+  const [fees, setFees] = useState([])
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState({
-    accountHolderName: '',
-    bankName: '',
-    accountNumber: '',
-    ifscCode: '', upiId: '',
-    primaryAccount: false,
+    periodType: '',
+    amount: '',
+    commissionRate: '',
+    tutorCode: '',
+    effectiveFrom: '',
+    effectiveTo: '',
+    levelCode: '',
     status: ''
   })
-
+  const [levels, setLevels] = useState([])
+  const [tutors, setTutors] = useState([])
 
   // pagination state
   const [page, setPage] = useState(0) // backend usually starts from 0
@@ -34,9 +44,10 @@ export default function Banks() {
 
   // 🔍 search form state
   const [searchForm, setSearchForm] = useState({
-    accountHolderName: '',
-    bankName: '',
-    primaryAccount: '',
+    periodType: '',
+    date: '',
+    levelCode: '',
+    tutorCode: '',
     status: ''
   })
 
@@ -48,62 +59,71 @@ export default function Banks() {
 
   useEffect(() => {
     load()
+    getLevels().then(r => setLevels(r.data || []))
   }, [])
-
 
   const load = () => handleSearch()
 
   // 🔍 search handler
   const handleSearch = async () => {
     const params = new URLSearchParams({
-      accountHolderName: searchForm.accountHolderName || '',
-      bankName: searchForm.bankName || '',
-      primaryAccount: searchForm.primaryAccount || '',
+      periodType: searchForm.periodType || '',
+      date: searchForm.date || '',
+      levelCode: searchForm.levelCode || '',
+      tutorCode: searchForm.tutorCode || '',
       status: searchForm.status || '',
       page,
       size
     })
-    const res = await searchBankDetails(params)
+    const res = await searchTutorFeeStructures(params)
     if (res.status == 200) {
       const data = await res.data
-      setBanks(data.content || [])
+      setFees(data.content || [])
       setTotalPages(data.totalPages || 0)
     }
   }
 
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    return dateString.split("T")[0]; // take only yyyy-MM-dd part
+  };
+
   const openNew = () => {
     setEditing(null)
     setForm({
-      accountHolderName: '',
-      bankName: '',
-      accountNumber: '',
-      ifscCode: '',
-      upiId: '',
-      primaryAccount: false,
+      periodType: '',
+      amount: '',
+      commissionRate: '',
+      tutorCode: '',
+      effectiveFrom: '',
+      effectiveTo: '',
+      levelCode: '',
       status: ''
     })
     setOpen(true)
   }
 
   const openEdit = t => {
+      console.log(t);
     setEditing(t)
     setForm({
-      accountHolderName: t.accountHolderName || '',
-      bankName: t.bankName || '',
-      accountNumber: t.accountNumber || '',
-      ifscCode: t.ifscCode || '',
-      upiId: t.upiId || '',
-      primaryAccount: t.primaryAccount || false,
-      status: t.status || ''
+        periodType: t.periodType || '',
+        amount: t.amount || '',
+        effectiveFrom: t.effectiveFrom || '',
+        commissionRate: t.commissionRate || '',
+        effectiveTo: t.effectiveTo || '',
+        levelCode: t.levelCode || '',
+        tutorCode: t.tutorCode || '',
+        status: t.status || ''
     })
     setOpen(true)
   }
 
   const save = async () => {
     if (editing) {
-      await updateBankDetail(editing.id, form)
+      await updateTutorFeeStructure(editing.id, form)
     } else {
-      await createBankDetail(form)
+      await createTutorFeeStructure(form)
     }
     setOpen(false)
     load()
@@ -111,9 +131,27 @@ export default function Banks() {
 
   const remove = async id => {
     if (confirm('Delete?')) {
-      await deleteBankDetail(id)
+      await deleteTutorFeeStructure(id)
       load()
     }
+  }
+
+  const aiExtract = async () => {
+    if (!form.bio) return alert('Add bio first')
+    const res = await extractSkills(form.bio)
+    setForm(f => ({
+      ...f,
+      skills: Array.isArray(res.data)
+        ? res.data.join(', ')
+        : res.data || ''
+    }))
+  }
+
+  const handleFileUpload = async e => {
+    const file = e.target.files[0]
+    if (!file) return
+    const res = await uploadResume(file)
+    setForm(f => ({ ...f, resumeUrl: res }))
   }
 
   // pagination controls
@@ -127,7 +165,7 @@ export default function Banks() {
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-semibold">Banks</h2>
+        <h2 className="text-2xl font-semibold">Fees</h2>
         <button onClick={openNew} className="flex items-center space-x-1 text-blue-600 hover:text-blue-800">
            <PlusIcon className="w-5 h-5" />
            <span>New</span>
@@ -136,28 +174,33 @@ export default function Banks() {
 
       {/* 🔍 Search Controls */}
       <div className="flex gap-2 mb-4 items-center">
-        <input
-          type="text"
-          placeholder="Account Holder Name"
-          className="input w-32"
-          value={searchForm.accountHolderName}
-          onChange={e => setSearchForm({ ...searchForm, accountHolderName: e.target.value })}
-        />
-        <input
-          type="text"
-          placeholder="Bank Name"
+        <select
           className="input w-40"
-          value={searchForm.bankName}
-          onChange={e => setSearchForm({ ...searchForm, bankName: e.target.value })}
+          value={searchForm.tutorCode}
+          onChange={e => setSearchForm({ ...searchForm, tutorCode: e.target.value })}
+        >
+          <option value="">All Levels</option>
+          {levels.map(l => (
+            <option key={l.code} value={l.code}>{l.name}</option>
+          ))}
+        </select>
+        <input
+          type="date"
+          placeholder="Date"
+          className="input w-40"
+          value={searchForm.date}
+          onChange={e => setSearchForm({ ...searchForm, date: e.target.value })}
         />
         <select
           className="input w-40"
-          value={searchForm.primaryAccount}
-          onChange={e => setSearchForm({ ...searchForm, primaryAccount: e.target.value })}
+          value={searchForm.periodType}
+          onChange={e => setSearchForm({ ...searchForm, periodType: e.target.value })}
         >
-          <option value="">All Account Type</option>
-          <option key="PRIMARY" value="PRIMARY">Primary</option>
-          <option key="OTHERS" value="OTHERS">Others</option>
+          <option value="">All Period</option>
+          <option key="HOURLY" value="HOURLY">Hourly</option>
+          <option key="SESSION" value="SESSION">Session</option>
+          <option key="DAILY" value="DAILY">Daily</option>
+          <option key="SUBJECT" value="SUBJECT">Subject</option>
         </select>
         <select
           className="input w-40"
@@ -181,25 +224,25 @@ export default function Banks() {
         <table className="table w-full">
           <thead className="bg-blue-100 text-blue-800  text-left">
             <tr>
-              <th>Account Holder Name</th>
-              <th>Bank Name</th>
-              <th>IFSC Code</th>
-              <th>Account Number</th>
-              <th>UPI No</th>
-              <th>Is Primary</th>
+              <th>Level</th>
+              <th>Period Type</th>
+              <th>Amount</th>
+              <th>Commission Rate</th>
+              <th>Effective From</th>
+              <th>Expired On</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {banks.map(t => (
+            {fees.map(t => (
               <tr key={t.id}>
-                <td>{t.accountHolderName}</td>
-                <td>{t.bankName}</td>
-                <td>{t.ifscCode}</td>
-                <td>{t.accountNumber}</td>
-                <td>{t.upiId}</td>
-                <td>{t.primaryAccount? "Yes":"No"}</td>
+                <td>{t.levelName}</td>
+                <td>{t.periodType}</td>
+                <td>{t.amount}</td>
+                <td>{t.commissionRate}</td>
+                <td>{t.effectiveFrom}</td>
+                <td>{t.effectiveTo}</td>
                 <td>{statusLabels[t.status] || t.status}</td>
                 <td>
                   <div className="flex flex-row items-center space-x-2">
@@ -221,15 +264,14 @@ export default function Banks() {
                 </td>
               </tr>
             ))}
-            {banks.length === 0 && (
+            {fees.length === 0 && (
               <tr>
-                <td colSpan="6" className="text-center text-gray-500 py-4">No banks found</td>
+                <td colSpan="6" className="text-center text-gray-500 py-4">No fees found</td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
-
      {/* Pagination Controls */}
         <div className="flex justify-between items-center mt-4">
           <button
@@ -253,87 +295,88 @@ export default function Banks() {
 
       {open && (
         <Modal
-          title={editing ? 'Edit Bank' : 'New Bank'}
+          title={editing ? 'Edit Fee' : 'New Fee'}
           onClose={() => setOpen(false)}
         >
           {/* existing modal form remains unchanged */}
           <div className="space-y-3">
-              {/* Bank dropdown */}
-              <div>
-                <input
-                  className="input"
-                  placeholder="Account Holder Name"
-                  value={form.accountHolderName}
-                  onChange={e =>
-                    setForm({ ...form, accountHolderName: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <input
-                  className="input"
-                  placeholder="Bank Name"
-                  value={form.bankName}
-                  onChange={e =>
-                    setForm({ ...form, bankName: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <input
-                  className="input"
-                  placeholder="IFSC Code"
-                  value={form.ifscCode}
-                  onChange={e =>
-                    setForm({ ...form, ifscCode: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <input
-                  className="input"
-                  placeholder="Account Number"
-                  value={form.accountNumber}
-                  onChange={e =>
-                    setForm({ ...form, accountNumber: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <input
-                  className="input"
-                  placeholder="UPI Id"
-                  value={form.upiId}
-                  onChange={e =>
-                    setForm({ ...form, upiId: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <label className="flex items-center space-x-2 mb-2">
-                  <input type="checkbox" checked={form.primaryAccount}
-                    onChange={(e) => setForm({ ...form, primaryAccount: e.target.checked })}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-                  <span className="text-sm text-gray-700">Primary Account</span>
-                </label>
-              </div>
+              {/* Level dropdown */}
               <div>
                 <select
-                  className="input w-40"
-                  value={form.status}
-                  onChange={e => setForm({ ...form, status: e.target.value })}
+                  className="input"
+                  value={form.levelCode}
+                  onChange={e =>
+                    setForm({ ...form, levelCode: e.target.value })
+                  }
                 >
-                  <option value="">Choose Status</option>
-                  <option key="ACTIVE" value="ACTIVE">Active</option>
-                  <option key="INACTIVE" value="INACTIVE">Inactive</option>
-                  <option key="DELETED" value="DELETED">Deleted</option>
+                  <option value="">Select Level</option>
+                  {levels.map(l => (
+                    <option key={l.code} value={l.code}>
+                      {l.name}
+                    </option>
+                  ))}
                 </select>
               </div>
+              <div>
+                  <select
+                    className="input w-40"
+                    value={searchForm.periodType}
+                    onChange={e => setForm({ ...form, periodType: e.target.value })}
+                  >
+                    <option value="">All Period</option>
+                    <option key="HOURLY" value="HOURLY">Hourly</option>
+                    <option key="SESSION" value="SESSION">Session</option>
+                    <option key="DAILY" value="DAILY">Daily</option>
+                    <option key="SUBJECT" value="SUBJECT">Subject</option>
+                  </select>
+
+              </div>
+              <div>
+                <input
+                  className="input"
+                  placeholder="Amount"
+                  value={form.amount}
+                  onChange={e =>
+                    setForm({ ...form, amount: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <input
+                  className="input"
+                  placeholder="Commission Rate"
+                  value={form.commissionRate}
+                  onChange={e =>
+                    setForm({ ...form, commissionRate: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <input
+                  className="input"
+                  type="date"
+                  placeholder="Effective From"
+                  value={formatDate(form.effectiveFrom)}
+                  onChange={e =>
+                    setForm({ ...form, effectiveFrom: e.target.value })
+                  }
+                />
+              </div>
+              <select
+                className="input w-40"
+                value={form.status}
+                onChange={e => setForm({ ...form, status: e.target.value })}
+              >
+                <option value="">Choose Status</option>
+                <option key="ACTIVE" value="ACTIVE">Active</option>
+                <option key="INACTIVE" value="INACTIVE">Inactive</option>
+                <option key="DELETED" value="DELETED">Deleted</option>
+              </select>
               <div className="flex justify-end">
                 <button
                     onClick={save}
                     className="p-2 bg-blue-600 hover:bg-blue-400 text-blue-1200"
-                    title="Save Bank Data"
+                    title="Save Fee Data"
                   >
                     <ArrowDownOnSquareIcon className="w-8 h-8" />
                 </button>

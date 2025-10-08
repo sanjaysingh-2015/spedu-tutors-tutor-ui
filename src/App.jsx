@@ -8,6 +8,7 @@ import AvailabilityCalendar from "./pages/AvailabilityCalendar";
 import Banks from "./pages/Banks";
 import Addresses from "./pages/Addresses";
 import Documents from "./pages/Documents";
+import Fees from "./pages/Fees";
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
             <Route path="/addresses" element={<Addresses />} />
             <Route path="/documents" element={<Documents />} />
             <Route path="/availability" element={<AvailabilityCalendar />} />
+            <Route path="/fees" element={<Fees />} />
           </Routes>
         </div>
       </div>

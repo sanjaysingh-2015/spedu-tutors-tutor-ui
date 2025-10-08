@@ -18,8 +18,10 @@ export const deleteAvailability = (id, payload) => api.delete(`api/availabilitie
 export const getTutorHolidays = () => api.get(`/api/holidays/active`);
 
 export const getCountries = () => api.get('/api/master/countries');
+export const getLevels = () => api.get('/api/master/levels');
 export const getDocumentCategories = () => api.get('/api/master/document-categories');
 export const getDocuments = () => api.get('/api/master/documents');
+export const getDocumentByCategory = (catCode) => api.get(`/api/master/documents/${catCode}`)
 
 export const getTutorDocuments = () => api.get(`/api/documents`);
 export const searchTutorDocuments = (param) => api.get(`/api/documents/search?${param}`);
@@ -32,3 +34,9 @@ export const searchTutorAddresses = (param) => api.get(`/api/addresses/search?${
 export const createTutorAddress = payload => api.post(`/api/addresses`, payload);
 export const updateTutorAddress = (id, payload) => api.put(`/api/addresses/${id}`, payload);
 export const deleteTutorAddress = id => api.delete(`/api/addresses/${id}`);
+
+export const getTutorFeeStructures = () => api.get('/api/fees')
+export const searchTutorFeeStructures = (param) => api.get(`/api/fees/search?${param}`)
+export const createTutorFeeStructure = payload => api.post('/api/fees', payload)
+export const updateTutorFeeStructure = (id, payload) => api.put(`/api/fees/${id}`, payload)
+export const deleteTutorFeeStructure = id => api.delete(`/api/fees/${id}`)

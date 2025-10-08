@@ -11,6 +11,11 @@ import {
     getResume,
     getBank,
     getPrimaryBank,
+    getAddress,
+    createAddress,
+    updateAddress,
+    getProfDocuments,
+    createDocument,
 } from "../services/tutorService";
 
 import {
@@ -25,7 +30,8 @@ import {
     updateTutorDocument,
 
     getDocuments,
-    getDocumentCategories
+    getDocumentCategories,
+    getDocumentByCategory
 } from "../services/otherService";
 
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
@@ -50,6 +56,7 @@ export default function ProfileTabs() {
   const [documentForm, setDocumentForm] = useState({ documentCategoryCode: "", documentCode: "", tutorCode: "", documentNumber: "", documentFileUrl: ""});
   const [countries, setCountries] = useState([]);
   const [documentCategories, setDocumentCategories] = useState([]);
+  const [documentsByCategory, setDocumentsByCategory] = useState({});
   const [documents, setDocuments] = useState([]);
   const [file, setFile] = useState(null);
   const [userName, setUserName] = useState("");
@@ -65,23 +72,23 @@ export default function ProfileTabs() {
         // fetch onboarding steps
         const stepsRes = await getSteps();
         setStepsStatus(stepsRes.data);
-        console.log(stepsStatus);
+
         // fetch countries
         const countryRes = await getCountries();
         setCountries(countryRes.data);
-        console.log(countries);
+
         // preload data for first tab
         const profileData = await getProfile();
-        setForm(profileData.data);
-        console.log(form);
+        setForm(profileData.data || {});
+
         // fetch categories
         const catRes = await getDocumentCategories();
         setDocumentCategories(catRes.data);
-        console.log(documentCategories);
+
         // fetch documents
         const docRes = await getDocuments();
         setDocuments(docRes.data);
-        console.log(documents);
+
       } catch (err) {
         addMessage("Error fetching steps or profile", "error");
       }
@@ -95,17 +102,18 @@ export default function ProfileTabs() {
       try {
         if (tab === "resume") {
           const resumeData = await getResume();
-          setResumeForm(resumeData.data);
+          setResumeForm(resumeData.data || {});
           // you may store resumeData if needed
         } else if (tab === "bank") {
           const bankData = await getPrimaryBank();
-          setBankForm(bankData.data);
+          setBankForm(bankData.data || {});
         } else if (tab === "address") {
-          const addressData = await getTutorAddresses();
-          setAddressForm(addressData.data[0]);
+          const addressData = await getAddress();
+          if(addressData.data)
+          setAddressForm(addressData.data || {});
         } else if(tab === "document") {
-          const documentData = await getTutorDocuments();
-          setDocumentForm(documentData.data[0]);
+          const documentData = await getProfDocuments();
+          setDocumentForm(documentData.data || {});
         }
       } catch (err) {
         addMessage("Failed to fetch data for tab "+ tab, "error");
@@ -121,6 +129,17 @@ export default function ProfileTabs() {
         s.onboardingStepCode === stepId ? { ...s, status } : s
       )
     );
+  };
+
+  const fetchDocumentsForCategory = async (categoryCode) => {
+    console.log(categoryCode);
+    if (!documentsByCategory[categoryCode]) {
+      const res = await getDocumentByCategory(categoryCode);
+      setDocumentsByCategory((prev) => ({
+        ...prev,
+        [categoryCode]: res.data,
+      }));
+    }
   };
 
   const getStepStatus = (id) =>
@@ -144,9 +163,9 @@ export default function ProfileTabs() {
   const handleAddressNext = async () => {
     try {
       if (getStepStatus("address") === "COMPLETED") {
-        await updateTutorAddress(addressForm);
+        await updateAddress(addressForm.id, addressForm);
       } else {
-        await createTutorAddress(addressForm);
+        await createAddress(addressForm);
       }
       updateStepStatus("address", "COMPLETED");
       setTab("document");
@@ -158,11 +177,7 @@ export default function ProfileTabs() {
 
   const handleDocumentNext = async () => {
     try {
-      if (getStepStatus("document") === "COMPLETED") {
-        await updateTutorDocument(documentForm);
-      } else {
-        await createTutorDocument(documentForm);
-      }
+      preparePayload();
       updateStepStatus("document", "COMPLETED");
       setTab("resume");
       updateStepStatus("resume", "INPROGRESS");
@@ -170,6 +185,26 @@ export default function ProfileTabs() {
       addMessage("Failed to save document info", "error");
     }
   };
+
+  const preparePayload = async () => {
+    // Filter out empty optional categories (like "OTHERS")
+    const payload = Object.values(documentForm)
+      .filter((item) => item.documentCategoryCode)
+      .map((item) => ({
+        documentCategoryCode: item.documentCategoryCode,
+        documentNumber: item.documentNumber || "",
+        documentCode: item.documentCode || "",
+        documentFileUrl: item.documentFileUrl || "",
+      }));
+
+    if (payload.length === 0) {
+      addMessage("Please upload at least one document before proceeding.", "error");
+      return;
+    }
+    await createDocument(payload);
+    addMessage("Documents saved successfully!", "success");
+  }
+
   const handleResumeNext = async () => {
     try {
       if (file) await uploadResume(file);
@@ -183,7 +218,7 @@ export default function ProfileTabs() {
 
   const handleBankNext = async () => {
     try {
-      console.log("Bank Status");
+
       if (getStepStatus("bank") === "COMPLETED") {
         await updateBank(bankForm);
       } else {
@@ -201,6 +236,20 @@ export default function ProfileTabs() {
       setTab(steps[currentIndex - 1].id);
     }
   };
+
+  const handleFileUpload = (e, categoryCode) => {
+      const file = e.target.files[0];
+      if (file) {
+        const fakeUrl = URL.createObjectURL(file); // in real use, replace with backend upload response
+        setDocumentForm((prev) => ({
+          ...prev,
+          [categoryCode]: {
+            ...(prev[categoryCode] || {}),
+            documentFileUrl: fakeUrl,
+          },
+        }));
+      }
+    };
 
   return (
     <Layout>
@@ -319,51 +368,67 @@ export default function ProfileTabs() {
 
       {tab === "document" && (
         <div>
-          <select
-            className="border rounded p-2 mb-2 block w-full"
-            value={documentForm.documentCategoryCode}
-            onChange={e => setAddressForm({ ...documentForm, documentCategoryCode: e.target.value })}
-          >
-            <option value="">All Category</option>
-            {documentCategories.map(l => (
-              <option key={l.code} value={l.code}>{l.name}</option>
-            ))}
-          </select>
-          <input type="text" placeholder="Address Line#1" value={addressForm.addressLine1}
-            onChange={(e) => setAddressForm({ ...addressForm, addressLine1: e.target.value })}
-            className="border rounded p-2 mb-2 block w-full" />
-          <input type="text" placeholder="Address Line#2" value={addressForm.addressLine2}
-            onChange={(e) => setAddressForm({ ...addressForm, addressLine2: e.target.value })}
-            className="border rounded p-2 mb-2 block w-full" />
-          <input type="text" placeholder="Address Line#3" value={addressForm.addressLine3}
-            onChange={(e) => setAddressForm({ ...addressForm, addressLine3: e.target.value })}
-            className="border rounded p-2 mb-2 block w-full" />
-          <input type="text" placeholder="City" value={addressForm.city}
-            onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
-            className="border rounded p-2 mb-2 block w-full" />
-          <input type="text" placeholder="State" value={addressForm.state}
-            onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })}
-            className="border rounded p-2 mb-2 block w-full" />
-          <select
-            className="border rounded p-2 mb-2 block w-full"
-            value={addressForm.countryCode}
-            onChange={e => setAddressForm({ ...addressForm, countryCode: e.target.value })}
-          >
-            <option value="">All Countries</option>
-            {countries.map(l => (
-              <option key={l.code} value={l.code}>{l.name}</option>
-            ))}
-          </select>
-          <input type="text" placeholder="Zip Code" value={addressForm.zipCode}
-            onChange={(e) => setAddressForm({ ...addressForm, zipCode: e.target.value })}
-            className="border rounded p-2 mb-2 block w-full" />
-          <label className="flex items-center space-x-2 mb-2">
-            <input type="checkbox" checked={addressForm.correspondingAddress}
-              onChange={(e) => setAddressForm({ ...addressForm, correspondingAddress: e.target.checked })}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-            <span className="text-sm text-gray-700">Primary Account</span>
-          </label>
-          <button onClick={handleAddressNext} className="bg-blue-600 text-white px-6 py-2 rounded-md shadow hover:bg-blue-700 transition">Next →</button>
+          {documentCategories.map((category) => (
+            <div key={category.code} className="mb-6 border p-4 rounded">
+              {/* Category label */}
+              <h3 className="font-semibold text-gray-700 mb-2">
+                {category.name}
+                {category.isOptional && (
+                  <span className="text-sm text-gray-500 ml-2">(Optional)</span>
+                )}
+              </h3>
+
+              {/* Document dropdown */}
+              <select
+                className="border rounded p-2 mb-2 block w-full"
+                value={documentForm[category.code]?.documentCode || ""}
+                onFocus={() => fetchDocumentsForCategory(category.code)}
+                onChange={(e) =>
+                  setDocumentForm({
+                    ...documentForm,
+                    [category.code]: {
+                      ...(documentForm[category.code] || {}),
+                      documentCategoryCode: category.code,
+                      documentCode: e.target.value,
+                    },
+                  })
+                }
+              >
+                <option value="">Select Document</option>
+                {(documentsByCategory[category.code] || []).map((doc) => (
+                  <option key={doc.code} value={doc.code}>
+                    {doc.name}
+                  </option>
+                ))}
+              </select>
+              <input type="text" placeholder="Document Number" value={documentForm.documentNumber}
+                onChange={(e) => setDocumentForm({
+                   ...documentForm,
+                   [category.code]: {
+                     ...(documentForm[category.code] || {}),
+                     documentCategoryCode: category.code,
+                     documentNumber: e.target.value,
+                   },
+                 })
+                }
+                className="border rounded p-2 mb-2 block w-full" />
+              {/* File upload */}
+              <input
+                type="file"
+                onChange={(e) => handleFileUpload(e, category.code)}
+                className="mb-2"
+              />
+
+              {/* Uploaded file display */}
+              {documentForm[category.code]?.documentFileUrl && (
+                <p className="text-sm text-green-600">
+                  Uploaded: {documentForm[category.code].documentFileUrl}
+                </p>
+              )}
+            </div>
+          ))}
+
+          <button onClick={handleDocumentNext} className="bg-blue-600 text-white px-6 py-2 rounded-md shadow hover:bg-blue-700 transition">Next →</button>
         </div>
       )}
 

@@ -55,7 +55,7 @@ export default function NavBar() {
               <UserIcon className="w-6 h-6" />
               <span>Profile</span>
             </Link>
-            {profileCompleted === true ? (
+            {profileCompleted === "true" ? (
               <>
                 <Link to="/addresses" className={`${commonCircle} bg-orange-100 text-orange-700 hover:bg-orange-200`}>
                   <MapPinIcon className="w-6 h-6" />

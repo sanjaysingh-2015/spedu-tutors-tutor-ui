@@ -38,6 +38,15 @@ export const updateAvailability = (id, payload) =>
 export const getAvailabilityById = (id) =>
   api.get(`/api/tutors/me/availability/${id}`);
 
+// --- Document ---
+export const getProfDocuments = () => api.get(`/api/tutors/me/document`);
+export const createDocument = payload => api.post(`/api/tutors/me/document`, payload);
+
+// --- Address ---
+export const getAddress = () => api.get(`/api/tutors/me/address`);
+export const createAddress = payload => api.post(`/api/tutors/me/address`, payload);
+export const updateAddress = (id, payload) => api.put(`/api/tutors/me/address/${id}`, payload);
+
 // --- Resume ---
 export const uploadResume = async (file) => {
   try {
