@@ -3,12 +3,20 @@ import { XMarkIcon } from "@heroicons/react/24/solid";
 
 export default function MessageModal({ messages, onClose }) {
   if (!messages || messages.length === 0) return null;
+  // ✅ Determine header based on first message type
+  const firstType = messages[0].type;
+  const headerTitle =
+    firstType === "error"
+      ? "Error"
+      : firstType === "success"
+      ? "Success"
+      : "Information";
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
       <div className="bg-white rounded-lg shadow-lg w-96 max-w-full p-4">
         <div className="flex justify-between items-center border-b pb-2 mb-2">
-          <h3 className="text-lg font-semibold">Messages</h3>
+          <h3 className="text-lg font-semibold">{headerTitle}</h3>
           <button onClick={onClose}>
             <XMarkIcon className="w-5 h-5 text-gray-600 hover:text-black" />
           </button>

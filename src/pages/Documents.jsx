@@ -160,7 +160,7 @@ export default function Documents() {
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-semibold">TutorDocuments</h2>
+        <h2 className="text-2xl font-semibold">Tutor Documents</h2>
         <button onClick={openNew} className="flex items-center space-x-1 text-blue-600 hover:text-blue-800">
            <PlusIcon className="w-5 h-5" />
            <span>New</span>

@@ -40,3 +40,27 @@ export const searchTutorFeeStructures = (param) => api.get(`/api/fees/search?${p
 export const createTutorFeeStructure = payload => api.post('/api/fees', payload)
 export const updateTutorFeeStructure = (id, payload) => api.put(`/api/fees/${id}`, payload)
 export const deleteTutorFeeStructure = id => api.delete(`/api/fees/${id}`)
+
+export const getPersonalInfo = () => api.get('/api/personal')
+export const updatePersonalInfo = (payload) => api.put(`/api/personal`, payload)
+
+// --- Resume ---
+export const uploadResumeFile = async (file) => {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = localStorage.getItem('spedu_token')
+    const response = await axios.post(`${API_BASE}/api/personal/resume`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+        Authorization: `Bearer ${token}`
+      },
+    });
+
+    return response.data.filePath; // could be file path / success message
+  } catch (error) {
+    console.error("Error uploading resume:", error);
+    throw error;
+  }
+};
+

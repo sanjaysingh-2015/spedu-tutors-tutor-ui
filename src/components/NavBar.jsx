@@ -51,12 +51,20 @@ export default function NavBar() {
         {/* Hide navigation links on login page */}
         {!isLoginPage && (
           <div className="flex space-x-4">
-            <Link to="/profile" className={`${commonCircle} bg-blue-100 text-blue-700 hover:bg-blue-200`}>
-              <UserIcon className="w-6 h-6" />
-              <span>Profile</span>
-            </Link>
+            {profileCompleted === "false" ? (
+              <>
+                <Link to="/profile" className={`${commonCircle} bg-blue-100 text-blue-700 hover:bg-blue-200`}>
+                  <UserIcon className="w-6 h-6" />
+                  <span>Profile</span>
+                </Link>
+              </>
+            ): <></>}
             {profileCompleted === "true" ? (
               <>
+                <Link to="/personal" className={`${commonCircle} bg-blue-100 text-blue-700 hover:bg-blue-200`}>
+                  <UserIcon className="w-6 h-6" />
+                  <span>Me</span>
+                </Link>
                 <Link to="/addresses" className={`${commonCircle} bg-orange-100 text-orange-700 hover:bg-orange-200`}>
                   <MapPinIcon className="w-6 h-6" />
                   <span>Add</span>
