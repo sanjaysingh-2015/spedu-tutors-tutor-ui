@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import Layout from "../components/Layout";
+import FilePreviewModal from "../components/FilePreviewModal"
 import {
   getLevels,
   getPersonalInfo,
   updatePersonalInfo,
-  uploadResumeFile
+  uploadResumeFile,
+  getFileResource
 } from "../services/otherService";
 import { CheckCircleIcon, ArrowDownOnSquareIcon } from "@heroicons/react/24/solid";
 import { useMessages } from "../context/MessageContext";
@@ -18,6 +20,9 @@ export default function PersonalInfo() {
   // ✅ Added for modal preview
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [fileUrl, setFileUrl] = useState(null);
+  const [fileType, setFileType] = useState(null);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     setUserName(localStorage.getItem("loggedInUser"));
@@ -32,6 +37,25 @@ export default function PersonalInfo() {
     };
     init();
   }, []);
+
+  const handleShowFile = async (fileId) => {
+    try {
+      const response = await getFileResource();
+
+      const contentType = response.headers["content-type"] || "";
+      const blob = new Blob([response.data], { type: contentType });
+      const url = URL.createObjectURL(blob);
+
+      setFileUrl(url);
+      if (contentType.includes("image")) setFileType("image");
+      else if (contentType.includes("pdf")) setFileType("pdf");
+      else setFileType("unknown");
+
+      setShowModal(true);
+    } catch (error) {
+      console.error("Error fetching file:", error);
+    }
+  };
 
   const save = async () => {
     try {
@@ -100,10 +124,7 @@ export default function PersonalInfo() {
               Uploaded: {form.resumeUrl}
             </p>
             <button
-              onClick={() => {
-                setPreviewUrl(form.resumeUrl);
-                setIsModalOpen(true);
-              }}
+              onClick={handleShowFile}
               className="text-blue-600 underline hover:text-blue-800"
             >
               Show
@@ -123,32 +144,16 @@ export default function PersonalInfo() {
       </div>
 
       {/* ✅ Modal Preview (added) */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-          <div className="bg-white p-4 rounded-lg max-w-4xl w-full relative">
-            <button
-              onClick={() => setIsModalOpen(false)}
-              className="absolute top-2 right-2 text-gray-500 hover:text-black"
-            >
-              ✕
-            </button>
-
-            {previewUrl?.endsWith(".pdf") ? (
-              <iframe
-                src={previewUrl}
-                title="Document Preview"
-                className="w-full h-[80vh] rounded"
-              />
-            ) : (
-              <img
-                src={previewUrl}
-                alt="Preview"
-                className="max-h-[80vh] w-auto mx-auto rounded"
-              />
-            )}
-          </div>
-        </div>
-      )}
+      <FilePreviewModal
+        show={showModal}
+        fileUrl={fileUrl}
+        fileType={fileType}
+        onClose={() => {
+          setShowModal(false);
+          setFileUrl(null);
+          setFileType(null);
+        }}
+      />
     </div>
   );
 }
