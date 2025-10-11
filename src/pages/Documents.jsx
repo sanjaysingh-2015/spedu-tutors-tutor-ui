@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react'
+import FilePreviewModal from "../components/FilePreviewModal"
+
 import {
   getTutorDocuments,
   searchTutorDocuments,
@@ -7,6 +9,9 @@ import {
   deleteTutorDocument,
   getDocumentCategories,
   getDocuments,
+  uploadDocumentFile,
+  getDocumentResource,
+  getDocumentByCategory,
 } from '../services/otherService'
 
 import {
@@ -33,6 +38,7 @@ export default function Documents() {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState({
+    id:0,
     documentCategoryCode: '',
     documentCode: '',
     tutorCode: '',
@@ -46,6 +52,11 @@ export default function Documents() {
   const [page, setPage] = useState(0) // backend usually starts from 0
   const [size, setSize] = useState(10)
   const [totalPages, setTotalPages] = useState(0)
+
+  const [showModal, setShowModal] = useState(false);
+  const [fileUrl, setFileUrl] = useState(null);
+  const [fileType, setFileType] = useState(null);
+
 
   // 🔍 search form state
   const [searchForm, setSearchForm] = useState({
@@ -89,6 +100,26 @@ export default function Documents() {
     }
   }
 
+    const handleShowFile = async (id, fileIdOrUrl) => {
+      try {
+        // If your API requires a fileId, pass it here instead of using getDocumentResource()
+        const response = await getDocumentResource(id, fileIdOrUrl);
+
+        const contentType = response.headers["content-type"] || "";
+        const blob = new Blob([response.data], { type: contentType });
+        const url = URL.createObjectURL(blob);
+
+        setFileUrl(url);
+        if (contentType.includes("image")) setFileType("image");
+        else if (contentType.includes("pdf")) setFileType("pdf");
+        else setFileType("unknown");
+
+        setShowModal(true);
+      } catch (error) {
+        console.error("Error fetching file:", error);
+      }
+    };
+
   const openNew = () => {
     setEditing(null)
     setForm({
@@ -97,12 +128,14 @@ export default function Documents() {
       tutorCode: '',
       documentNumber: '',
       documentFileUrl: '',
-      status: ''
+      status: '',
+      id:0
     })
     setOpen(true)
   }
 
   const openEdit = t => {
+      console.log(t)
     setEditing(t)
     setForm({
       documentCategoryCode: t.documentCategoryCode || '',
@@ -110,7 +143,8 @@ export default function Documents() {
       tutorCode: t.tutorCode || '',
       documentNumber: t.documentNumber || '',
       documentFileUrl: t.documentFileUrl || '',
-      status: t.status || ''
+      status: t.status || '',
+      id: t.id || ''
     })
     setOpen(true)
   }
@@ -131,13 +165,26 @@ export default function Documents() {
       load()
     }
   }
+  const fetchDocumentsForCategory = async (categoryCode) => {
+    console.log(categoryCode);
+    if (!categoryCode) {
+      const res = await getDocumentByCategory(categoryCode);
+      setDocuments(r => setDocuments(r.data || []));
+    }
+  };
+
+  const handleCategoryChange = async e => {
+    setForm({ ...form, documentCategoryCode: e.target.value })
+    await fetchDocumentsForCategory(e.target.value)
+  }
 
   const handleFileUpload = async e => {
-    const file = e.target.files[0]
-    if (!file) return
-    const res = await uploadResume(file)
-    setForm(f => ({ ...f, documentFileUrl: res }))
+    const file = e.target.files[0];
+    if (!file) return;
+    const res = await uploadDocumentFile(form.documentCategoryCode, file);
+    setForm((f) => ({ ...f, documentFileUrl: res }));
   }
+
   const aiExtract = async () => {
     if (!form.bio) return alert('Add bio first')
     const res = await extractSkills(form.bio)
@@ -221,7 +268,7 @@ export default function Documents() {
               <th>Category</th>
               <th>Document</th>
               <th>Document No</th>
-              <th>File url</th>
+              <th>File</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
@@ -232,7 +279,17 @@ export default function Documents() {
                 <td>{t.documentCategoryName}</td>
                 <td>{t.documentName}</td>
                 <td>{t.documentNumber}</td>
-                <td>{t.documentFileUrl}</td>
+                <td>{t.documentFileUrl ? (
+                    <button
+                      onClick={() => handleShowFile(t.id, t.documentFileUrl)}
+                      className="text-blue-600 underline hover:text-blue-800"
+                    >
+                      Show
+                    </button>
+                  ) : (
+                    <span className="text-gray-400 italic">No File</span>
+                  )}
+                </td>
                 <td>{statusLabels[t.status] || t.status}</td>
                 <td>
                   <div className="flex flex-row items-center space-x-2">
@@ -295,20 +352,8 @@ export default function Documents() {
               <div>
                 <select
                   className="input w-40"
-                  value={form.tutorCode}
-                  onChange={e => setForm({ ...form, tutorCode: e.target.value })}
-                >
-                  <option value="">All Tutors</option>
-                  {tutors.map(l => (
-                    <option key={l.code} value={l.code}>{l.firstName +' '+ l.lastName}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <select
-                  className="input w-40"
                   value={form.documentCategoryCode}
-                  onChange={e => setForm({ ...form, documentCategoryCode: e.target.value })}
+                  onChange={handleCategoryChange}
                 >
                   <option value="">All Categories</option>
                   {documentCategories.map(l => (
@@ -320,6 +365,7 @@ export default function Documents() {
                 <select
                   className="input w-40"
                   value={form.documentCode}
+                  onFocus={() => fetchDocumentsForCategory(form.documentCategoryCode)}
                   onChange={e => setForm({ ...form, documentCode: e.target.value })}
                 >
                   <option value="">All Documents</option>
@@ -359,6 +405,16 @@ export default function Documents() {
             </div>
         </Modal>
       )}
+      <FilePreviewModal
+        show={showModal}
+        fileUrl={fileUrl}
+        fileType={fileType}
+        onClose={() => {
+          setShowModal(false);
+          setFileUrl(null);
+          setFileType(null);
+        }}
+      />
     </div>
   )
 }
