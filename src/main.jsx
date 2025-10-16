@@ -1,3 +1,6 @@
+// 👇 Add this line FIRST (must be before any imports)
+window.global ||= window;
+
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'

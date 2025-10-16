@@ -8,6 +8,7 @@ export const login = async (payload) => {
   localStorage.setItem('userRole', res.data.role)
   localStorage.setItem('loginAt', res.data.loginAt)
   localStorage.setItem('profileCompleted', res.data.profileCompleted)
+  localStorage.setItem('userId', res.data.userId)
   return res.data
 }
 
@@ -18,5 +19,10 @@ export const register = async (payload) => {
 export const logout = () => {
   authApi.post('/api/auth/logout');
   localStorage.removeItem('spedu_token')
+  localStorage.removeItem('loggedInUser')
+  localStorage.removeItem('userRole')
+  localStorage.removeItem('loginAt')
+  localStorage.removeItem('profileCompleted')
+  localStorage.removeItem('userId')
   window.location.href = '/login'
 }

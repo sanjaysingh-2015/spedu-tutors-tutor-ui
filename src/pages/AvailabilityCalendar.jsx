@@ -1,21 +1,28 @@
 // src/pages/AvailabilityCalendar.jsx
 import React, { useEffect, useRef, useState } from "react";
+import { Dialog } from "@headlessui/react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import {
-  getAvailability,
-  saveAvailability,
+  getAvailability,            // ✅ returns tutor_availability_days list
+  saveAvailability,            // ✅ saves tutor_availability (with days)
   updateAvailability,
   deleteAvailability,
-  getTutorHolidays, // ✅ add this in your otherService
+  getTutorHolidays,
+  getWeekends,
+  saveWeekend,
 } from "../services/otherService";
+
+import {
+  ArrowDownOnSquareIcon,
+  GlobeAltIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
 import { useMessages } from "../context/MessageContext";
 
-/**
- * Utility Functions
- */
+// Utility Functions
 function generateUUID() {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
@@ -35,84 +42,188 @@ function formatLocalTime(date) {
   return date.toTimeString().split(" ")[0];
 }
 
-/**
- * Component
- */
+// Component
 export default function AvailabilityCalendar() {
   const { addMessage } = useMessages();
   const calendarRef = useRef(null);
 
   const [events, setEvents] = useState([]);
-  const [holidays, setHolidays] = useState([]); // ✅ holidays state
+  const [holidays, setHolidays] = useState([]);
+  const [weekendEvents, setWeekendEvents] = useState([]);
   const [view, setView] = useState("timeGridWeek");
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState({ open: false, mode: "create", event: null });
   const [userName, setUserName] = useState("");
 
-  // Fetch availability & holidays
-  useEffect(() => {
-    setUserName(localStorage.getItem("loggedInUser"));
-    const fetchAll = async () => {
-      setLoading(true);
-      try {
-        const [availabilityRes, holidaysRes] = await Promise.all([
-          getAvailability(),
-          getTutorHolidays(),
-        ]);
+  const [weekendModalOpen, setWeekendModalOpen] = useState(false);
+  const [selectedDays, setSelectedDays] = useState([]);
 
-        // ✅ Map availability
-        const mappedAvailability = availabilityRes.data.map((slot) => {
-          const showDate = slot.eventDate;
-          return {
-            id: `${slot.eventId}::${slot.id}`,
-            title: slot.status || "AVAILABLE",
-            start: `${formatLocalDate(showDate)}T${slot.startTime}`,
-            end: `${formatLocalDate(showDate)}T${slot.endTime}`,
-            editable: true,
-            extendedProps: {
-              eventId: slot.eventId,
-              dbId: slot.id,
-              tutorId: slot.tutorId,
-              dayOfWeek: slot.dayOfWeek,
-              status: slot.status,
-            },
-            color:
-              slot.status === "ACTIVE"
-                ? "green"
-                : slot.status === "BLOCKED"
-                ? "red"
-                : "gray",
-          };
-        });
+  // ✅ Fetch saved weekends on load
+  const fetchWeekends = async () => {
+    try {
+      const res = await getWeekends();
+      const data = res.data;
 
-        // ✅ Map holidays
-        const mappedHolidays = holidaysRes.data
-          .filter((h) => h.status === "ACTIVE")
-          .map((h) => ({
-            id: `holiday-${h.id}`,
-            title: h.name || "Holiday",
-            start: h.startDate,
-            end: new Date(new Date(h.endDate).getTime() + 86400000), // include end date
-            display: "background", // ✅ background block
-            color: "rgba(60, 60, 60, 0.85)", // light red background
-            extendedProps: { isHoliday: true, ...h },
-          }));
+      // Convert backend values ("Sun", "Mon", etc.) to uppercase
+      const weekends = [];
+      if (data?.weekendFirst) weekends.push(data.weekendFirst.trim().slice(0, 3).toUpperCase());
+      if (data?.weekendSecond) weekends.push(data.weekendSecond.trim().slice(0, 3).toUpperCase());
 
-        setEvents(mappedAvailability);
-        setHolidays(mappedHolidays);
-      } catch (err) {
-        console.error(err);
-        addMessage("Failed to load availability or holidays", "error");
-      } finally {
-        setLoading(false);
+      setSelectedDays(weekends);
+
+      // Map "SUN" → 0, "MON" → 1, ..., "SAT" → 6
+      const dayIndexMap = {
+        SUN: 0,
+        MON: 1,
+        TUE: 2,
+        WED: 3,
+        THU: 4,
+        FRI: 5,
+        SAT: 6,
+      };
+
+      const weekendMappings = weekends.map((day) => ({
+        id: `weekend-${day}`,
+        daysOfWeek: [dayIndexMap[day]],
+        display: "background",
+        color: "rgba(255, 99, 71, 0.25)", // light red overlay
+        title: "Weekend",
+        editable: false,
+      }));
+
+      setWeekendEvents(weekendMappings);
+    } catch (err) {
+      console.error(err);
+      addMessage("Failed to load weekends", "error");
+    }
+  };
+
+  // ✅ Toggle selection
+    const handleDayChange = (day) => {
+      if (selectedDays.includes(day)) {
+        setSelectedDays(selectedDays.filter((d) => d !== day));
+      } else if (selectedDays.length < 2) {
+        setSelectedDays([...selectedDays, day]);
+      } else {
+        addMessage("You can select a maximum of 2 days only.", "warning");
       }
     };
-    fetchAll();
-  }, [addMessage]);
 
-  /**
-   * Calendar Handlers
-   */
+  // ✅ Save selected weekends
+    const handleWeekendSave = async () => {
+      try {
+        await saveWeekend({ weekends: selectedDays });
+        addMessage("Weekend saved successfully", "success");
+        setWeekendModalOpen(false);
+      } catch (err) {
+        addMessage("Failed to save weekends", "error");
+      }
+    };
+
+  // 🧩 Weekend Modal
+    const WeekendModal = () => (
+      <Dialog
+        open={weekendModalOpen}
+        onClose={() => setWeekendModalOpen(false)}
+        className="fixed inset-0 z-50 flex items-center justify-center"
+      >
+        <div className="absolute inset-0 bg-black opacity-40" />
+        <Dialog.Panel className="bg-white rounded-lg p-6 z-10 w-96 shadow-lg">
+          <Dialog.Title className="text-lg font-semibold mb-4">
+            Select Your Weekend Days
+          </Dialog.Title>
+
+          <div className="flex flex-wrap gap-3 mb-4">
+            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+              <label key={day} className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  value={day}
+                  checked={selectedDays.includes(day)}
+                  onChange={() => handleDayChange(day)}
+                  className="accent-blue-500"
+                />
+                <span>{day}</span>
+              </label>
+            ))}
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <button
+              className="px-3 py-2 border rounded"
+              onClick={() => setWeekendModalOpen(false)}
+            >
+              <XMarkIcon className="w-4 h-4" />
+            </button>
+            <button
+              className="px-3 py-2 bg-blue-600 text-white rounded"
+              onClick={handleWeekendSave}
+            >
+              <ArrowDownOnSquareIcon className="w-4 h-4" />
+            </button>
+          </div>
+        </Dialog.Panel>
+      </Dialog>
+    );
+
+  const fetchAll = async () => {
+        setLoading(true);
+        try {
+          const [availabilityRes, holidaysRes] = await Promise.all([
+            getAvailability(),
+            getTutorHolidays(),
+          ]);
+
+
+          const mappedAvailability = availabilityRes.data.data.map((day) => ({
+            id: `${day.id}`,
+            title: `${day.status || "AVAILABLE"} (${day.maxBooking})`,
+            start: `${day.eventDate}T${day.startTime}`,
+            end: `${day.eventDate}T${day.endTime}`,
+            editable: true,
+            extendedProps: {
+              dbId: day.id,
+              tutorAvailabilityId: day.tutorAvailabilityId,
+              dayOfWeek: day.dayOfWeek,
+              status: day.status,
+              eventDate: day.eventDate,
+            },
+            color:
+              day.status === "ACTIVE"
+                ? "green"
+                : day.status === "BLOCKED"
+                ? "red"
+                : "gray",
+          }));
+
+          const mappedHolidays = holidaysRes.data
+            .filter((h) => h.status === "ACTIVE")
+            .map((h) => ({
+              id: `holiday-${h.id}`,
+              title: h.name || "Holiday",
+              start: h.startDate,
+              end: new Date(new Date(h.endDate).getTime() + 86400000),
+              display: "background",
+              color: "rgba(60, 60, 60, 0.85)",
+              extendedProps: { isHoliday: true, ...h },
+            }));
+
+          setEvents(mappedAvailability);
+          setHolidays(mappedHolidays);
+        } catch (err) {
+          console.error(err);
+          addMessage("Failed to load availability or holidays", "error");
+        } finally {
+          setLoading(false);
+        }
+      };
+
+  useEffect(() => {
+    setUserName(localStorage.getItem("loggedInUser"));
+    fetchAll();
+    fetchWeekends();
+  }, []); // ✅ empty dependency = runs only once
+
   const handleDateSelect = (selectInfo) => {
     const isHoliday = holidays.some(
       (h) =>
@@ -124,6 +235,15 @@ export default function AvailabilityCalendar() {
       return;
     }
 
+    function isWeekend(date, weekendDays) {
+      const shortDay = date.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase();
+      return weekendDays.includes(shortDay);
+    };
+
+    if (isWeekend) {
+      addMessage("Cannot create availability on a weekend!", "warning");
+      return;
+    }
     setModal({
       open: true,
       mode: "create",
@@ -138,7 +258,6 @@ export default function AvailabilityCalendar() {
 
   const handleEventClick = (clickInfo) => {
     const ev = clickInfo.event;
-    // ✅ Prevent editing holidays
     if (ev.extendedProps?.isHoliday) return;
 
     setModal({
@@ -148,10 +267,8 @@ export default function AvailabilityCalendar() {
         id: ev.id,
         start: ev.start,
         end: ev.end,
-        eventId: ev.extendedProps.eventId,
         dbId: ev.extendedProps.dbId,
         status: ev.extendedProps.status,
-        isRecurring: ev.extendedProps.isRecurring,
       },
     });
   };
@@ -163,12 +280,11 @@ export default function AvailabilityCalendar() {
       return;
     }
     try {
-      await updateAvailability(event.extendedProps.eventId, {
+      await updateAvailability(event.extendedProps.dbId, {
         dayOfWeek: dayOfWeekFromDate(event.start),
         eventDate: formatLocalDate(event.start),
         startTime: formatLocalTime(event.start),
         endTime: formatLocalTime(event.end),
-        isRecurring: event.extendedProps.isRecurring,
         status: event.extendedProps.status,
       });
       addMessage("Availability updated", "success");
@@ -178,84 +294,71 @@ export default function AvailabilityCalendar() {
     }
   };
 
-  /**
-   * Slot Modal (unchanged)
-   */
+  // ✅ Updated Modal for Start + End Date
   const SlotModal = ({ modal, onClose }) => {
     if (!modal.open) return null;
     const ev = modal.event;
 
-    const [dateVal, setDateVal] = useState(formatLocalDate(new Date(ev.start)));
+    const [startDate, setStartDate] = useState(formatLocalDate(new Date(ev.start)));
+    const [endDate, setEndDate] = useState(formatLocalDate(new Date(ev.end)));
     const [startVal, setStartVal] = useState(formatLocalTime(new Date(ev.start)));
     const [endVal, setEndVal] = useState(formatLocalTime(new Date(ev.end)));
+    const [maxBooking, setMaxBooking] = useState(5);
     const [statusVal, setStatusVal] = useState(ev.status || "ACTIVE");
-    const [recurring, setRecurring] = useState(ev.isRecurring ?? true);
 
     const handleSave = async () => {
-      const startDate = new Date(`${dateVal}T${startVal}`);
-      const endDate = new Date(`${dateVal}T${endVal}`);
-
       const payload = {
-        eventId: ev.eventId || generateUUID(),
-        dayOfWeek: dayOfWeekFromDate(startDate),
-        eventDate: formatLocalDate(startDate),
+        startDate,
+        endDate,
         startTime: startVal,
         endTime: endVal,
-        isRecurring: recurring,
+        maxBooking,
         status: statusVal,
       };
 
       try {
         if (modal.mode === "create") {
           const saved = await saveAvailability(payload);
-          const savedSlot = saved.data || saved;
-          const showDate = dateVal;
-
-          setEvents((prev) => [
-            ...prev,
-            {
-              id: `${savedSlot.eventId}::${savedSlot.id}`,
-              title: savedSlot.status,
-              eventDate: savedSlot.eventDate,
-              start: `${showDate}T${savedSlot.startTime}`,
-              end: `${showDate}T${savedSlot.endTime}`,
-              extendedProps: savedSlot,
-              color: savedSlot.status === "ACTIVE" ? "green" : "gray",
-            },
-          ]);
-          addMessage("Slot created", "success");
+          const days = saved.data.days || []; // ✅ backend returns generated days
+          const mapped = days.map((day) => ({
+            id: `${day.id}`,
+            title: day.status,
+            start: `${day.eventDate}T${day.startTime}`,
+            end: `${day.eventDate}T${day.endTime}`,
+            color: day.status === "ACTIVE" ? "green" : "gray",
+            extendedProps: day,
+          }));
+          setEvents((prev) => [...prev, ...mapped]);
+          addMessage("Availability created", "success");
         } else {
-          await updateAvailability(ev.eventId, payload);
+          await updateAvailability(ev.dbId, payload);
           setEvents((prev) =>
             prev.map((e) =>
               e.id === ev.id
                 ? {
                     ...e,
-                    start: `${dateVal}T${startVal}`,
-                    end: `${dateVal}T${endVal}`,
-                    eventDate: `${dateVal}`,
                     title: statusVal,
-                    extendedProps: { ...e.extendedProps, ...payload },
+                    color: statusVal === "ACTIVE" ? "green" : "gray",
                   }
                 : e
             )
           );
-          addMessage("Slot updated", "success");
+          addMessage("Availability updated", "success");
         }
         onClose();
       } catch (err) {
-        addMessage("Failed to save slot", "error");
+        addMessage("Failed to save availability", "error");
       }
     };
 
     const handleDelete = async () => {
       try {
-        await deleteAvailability(ev.eventId || ev.dbId);
+        await deleteAvailability(ev.dbId);
         setEvents((prev) => prev.filter((e) => e.id !== ev.id));
-        addMessage("Slot deleted", "success");
+        addMessage("Availability deleted", "success");
         onClose();
-      } catch (err) {
-        addMessage("Failed to delete slot", "error");
+      } catch {
+        addMessage("Failed to delete", "error");
       }
     };
 
@@ -267,12 +370,20 @@ export default function AvailabilityCalendar() {
             {modal.mode === "create" ? "Create Slot" : "Edit Slot"}
           </h3>
 
-          <label className="block text-sm">Date</label>
+          <label className="block text-sm">Start Date</label>
           <input
             type="date"
             className="w-full border p-2 mb-2"
-            value={dateVal}
-            onChange={(e) => setDateVal(e.target.value)}
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+          />
+
+          <label className="block text-sm">End Date</label>
+          <input
+            type="date"
+            className="w-full border p-2 mb-2"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
           />
 
           <label className="block text-sm">Start Time</label>
@@ -291,6 +402,15 @@ export default function AvailabilityCalendar() {
             onChange={(e) => setEndVal(e.target.value)}
           />
 
+          <label className="block text-sm">Max Booking</label>
+          <input
+            type="number"
+            className="w-full border p-2 mb-2"
+            min={1}
+            value={maxBooking}
+            onChange={(e) => setMaxBooking(e.target.value)}
+          />
+
           <label className="block text-sm">Status</label>
           <select
             className="w-full border p-2 mb-2"
@@ -301,15 +421,6 @@ export default function AvailabilityCalendar() {
             <option>BLOCKED</option>
             <option>INACTIVE</option>
           </select>
-
-          <label className="flex items-center space-x-2 mb-4">
-            <input
-              type="checkbox"
-              checked={recurring}
-              onChange={(e) => setRecurring(e.target.checked)}
-            />
-            <span>Recurring</span>
-          </label>
 
           <div className="flex justify-between">
             {modal.mode === "edit" && (
@@ -337,16 +448,29 @@ export default function AvailabilityCalendar() {
     );
   };
 
-  // Custom View Switch Buttons
+  // Calendar render
   const changeView = (newView) => {
     setView(newView);
-    const calendarApi = calendarRef.current?.getApi();
-    calendarApi?.changeView(newView);
+    calendarRef.current?.getApi()?.changeView(newView);
   };
+
+
 
   return (
     <div className="p-4">
       <h2 className="text-xl font-bold mb-4">{userName}'s define slot availability</h2>
+      <div className="flex justify-end mb-4">
+        <button
+          className="px-4 py-2 bg-blue-600 text-white rounded flex items-center gap-2"
+          onClick={() => setWeekendModalOpen(true)}
+        >
+          <GlobeAltIcon className="w-4 h-4" />
+          Weekends
+        </button>
+      </div>
+
+      {/* 🧩 Weekend Modal Component */}
+      <WeekendModal />
 
       <div className="flex justify-end mb-2 space-x-2">
         <button
@@ -389,7 +513,7 @@ export default function AvailabilityCalendar() {
           selectMirror={true}
           timeZone="local"
           select={handleDateSelect}
-          events={[...events, ...holidays]} // ✅ combine both
+          events={[...events, ...holidays, ...weekendEvents]}
           editable={true}
           eventResizableFromStart={true}
           eventClick={handleEventClick}

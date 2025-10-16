@@ -13,6 +13,7 @@ export default function Dashboard() {
         navigate("/profile");
       } else {
         setProfile(res.data);
+        localStorage.setItem('tutorId', res.data.code);
       }
     });
   }, []);
