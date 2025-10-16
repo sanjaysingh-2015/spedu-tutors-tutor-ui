@@ -14,7 +14,6 @@ import Fees from "./pages/Fees";
 
 export default function App() {
   const tutorId = localStorage.getItem("tutorId");
-  console.log(tutorId);
   return (
       <>
         <TutorChatListener tutorId={tutorId} />
