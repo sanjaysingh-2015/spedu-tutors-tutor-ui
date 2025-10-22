@@ -9,6 +9,7 @@ import AvailabilityCalendar from "./pages/AvailabilityCalendar";
 import Banks from "./pages/Banks";
 import Addresses from "./pages/Addresses";
 import Documents from "./pages/Documents";
+import Classes from "./pages/Classes";
 import PersonalInfo from "./pages/PersonalInfo";
 import Fees from "./pages/Fees";
 
@@ -32,6 +33,7 @@ export default function App() {
               <Route path="/availability" element={<AvailabilityCalendar />} />
               <Route path="/fees" element={<Fees />} />
               <Route path="/personal" element={<PersonalInfo />} />
+              <Route path="/classes" element={<Classes />} />
             </Routes>
           </div>
         </div>

@@ -287,26 +287,26 @@ export default function Addresses() {
         </table>
       </div>
 
-     {/* Pagination Controls */}
-        <div className="flex justify-between items-center mt-4">
-          <button
-            onClick={prevPage}
-            disabled={page === 0}
-            className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
-          >
-            <ChevronLeftIcon className="w-6 h-6" />
-          </button>
-          <span>
-            Page {page + 1} of {totalPages}
-          </span>
-          <button
-            onClick={nextPage}
-            disabled={page >= totalPages - 1}
-            className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
-          >
-            <ChevronRightIcon className="w-6 h-6" />
-          </button>
-        </div>
+      {/* Pagination Controls */}
+      <div className="flex justify-between items-center mt-4">
+        <button
+          onClick={prevPage}
+          disabled={page === 0}
+          className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+        >
+          <ChevronLeftIcon className="w-6 h-6" />
+        </button>
+        <span>
+          Page {page + 1} of {totalPages}
+        </span>
+        <button
+          onClick={nextPage}
+          disabled={page >= totalPages - 1}
+          className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+        >
+          <ChevronRightIcon className="w-6 h-6" />
+        </button>
+      </div>
 
       {open && (
         <Modal

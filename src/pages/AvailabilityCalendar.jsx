@@ -49,6 +49,7 @@ export default function AvailabilityCalendar() {
 
   const [events, setEvents] = useState([]);
   const [holidays, setHolidays] = useState([]);
+  const [weekendDays, setWeekendDays] = useState([]);
   const [weekendEvents, setWeekendEvents] = useState([]);
   const [view, setView] = useState("timeGridWeek");
   const [loading, setLoading] = useState(false);
@@ -69,7 +70,7 @@ export default function AvailabilityCalendar() {
       if (data?.weekendFirst) weekends.push(data.weekendFirst.trim().slice(0, 3).toUpperCase());
       if (data?.weekendSecond) weekends.push(data.weekendSecond.trim().slice(0, 3).toUpperCase());
 
-      setSelectedDays(weekends);
+      setWeekendDays(weekends);
 
       // Map "SUN" → 0, "MON" → 1, ..., "SAT" → 6
       const dayIndexMap = {
@@ -82,7 +83,7 @@ export default function AvailabilityCalendar() {
         SAT: 6,
       };
 
-      const weekendMappings = weekends.map((day) => ({
+      const weekendMappings = weekendDays.map((day) => ({
         id: `weekend-${day}`,
         daysOfWeek: [dayIndexMap[day]],
         display: "background",
@@ -174,10 +175,9 @@ export default function AvailabilityCalendar() {
             getTutorHolidays(),
           ]);
 
-
           const mappedAvailability = availabilityRes.data.data.map((day) => ({
             id: `${day.id}`,
-            title: `${day.status || "AVAILABLE"} (${day.maxBooking})`,
+            title: `${day.eventName || "Session"}`,
             start: `${day.eventDate}T${day.startTime}`,
             end: `${day.eventDate}T${day.endTime}`,
             editable: true,
@@ -187,6 +187,7 @@ export default function AvailabilityCalendar() {
               dayOfWeek: day.dayOfWeek,
               status: day.status,
               eventDate: day.eventDate,
+              maxBooking: day.maxBooking
             },
             color:
               day.status === "ACTIVE"
@@ -225,6 +226,7 @@ export default function AvailabilityCalendar() {
   }, []); // ✅ empty dependency = runs only once
 
   const handleDateSelect = (selectInfo) => {
+      console.log(selectInfo);
     const isHoliday = holidays.some(
       (h) =>
         new Date(selectInfo.start) >= new Date(h.start) &&
@@ -236,11 +238,13 @@ export default function AvailabilityCalendar() {
     }
 
     function isWeekend(date, weekendDays) {
+        console.log(date);
+        console.log(weekendDays);
       const shortDay = date.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase();
       return weekendDays.includes(shortDay);
     };
 
-    if (isWeekend) {
+    if (isWeekend(selectInfo.start, weekendDays)) {
       addMessage("Cannot create availability on a weekend!", "warning");
       return;
     }
@@ -521,6 +525,17 @@ export default function AvailabilityCalendar() {
           height="75vh"
           allDaySlot={false}
           slotDuration={{ minutes: 30 }}
+          eventContent={(arg) => {
+            const { status, maxBooking } = arg.event.extendedProps;
+            return {
+              html: `
+                <div style="font-weight: 600;">${arg.event.title}</div>
+                <div style="font-size: 12px; line-height: 1.2;">
+                  ${status} (${maxBooking})
+                </div>
+              `,
+            };
+          }}
         />
       </div>
 

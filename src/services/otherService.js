@@ -25,6 +25,7 @@ export const getLevels = () => api.get('/api/master/levels');
 export const getDocumentCategories = () => api.get('/api/master/document-categories');
 export const getDocuments = () => api.get('/api/master/documents');
 export const getDocumentByCategory = (catCode) => api.get(`/api/master/documents/${catCode}`)
+export const getSubjects = () => api.get('/api/master/subjects');
 
 export const getTutorDocuments = () => api.get(`/api/documents`);
 export const searchTutorDocuments = (param) => api.get(`/api/documents/search?${param}`);
@@ -48,6 +49,12 @@ export const getPersonalInfo = () => api.get('/api/personal')
 export const getFileResource = () => api.get('/api/personal/file', { responseType: 'blob' })
 export const getDocumentResource = (id) => api.get(`/api/documents/file/${id}`, { responseType: 'blob' })
 export const updatePersonalInfo = (payload) => api.put(`/api/personal`, payload)
+
+export const getClasses = () => api.get(`/api/classes`)
+export const searchClasses = (param) => api.get(`/api/classes/search?${param}`)
+export const createClass = (payload) => api.post(`/api/classes`, payload)
+export const updateClass = (id, payload) => api.put(`/api/classes/${id}`, payload)
+export const deleteClass = (id) => api.delete(`/api/classes`)
 
 // --- Resume ---
 export const uploadResumeFile = async (file) => {
