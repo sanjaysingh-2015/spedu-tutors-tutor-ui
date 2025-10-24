@@ -4,7 +4,7 @@ import SockJS from "sockjs-client";
 import * as Stomp from "@stomp/stompjs";
 import ChatModal from "./ChatModal";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8084/chat-api";
+const API_BASE = import.meta.env.VITE_CHAT_API_BASE_URL || "http://localhost:8084/chat-api";
 
 export default function TutorChatListener({ tutorId }) {
   const [stompClient, setStompClient] = useState(null);
