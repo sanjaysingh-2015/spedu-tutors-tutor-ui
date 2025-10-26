@@ -110,7 +110,6 @@ export default function Classes() {
     if (editing) {
       await updateClass(editing.id, form);
     } else {
-        alert("Creating");
       await createClass({ ...form });
     }
     setOpen(false);
