@@ -114,9 +114,17 @@ export default function PersonalInfo() {
           className="border rounded p-2 mb-2 block w-full"
         />
       </div>
-
+      <div className="mb-2">
+        <input
+          type="text"
+          placeholder="Skills"
+          value={form.skills}
+          onChange={(e) => setForm({ ...form, skills: e.target.value })}
+          className="border rounded p-2 mb-2 block w-full"
+        />
+      </div>
       {/* Resume file upload */}
-      <div>
+      <div className="mb-2">
         <input type="file" onChange={handleFileUpload} />
         {form.resumeUrl && (
           <div className="flex items-center gap-3 mt-2">

@@ -28,6 +28,7 @@ export default function Classes() {
 
   const [form, setForm] = useState({
     subjectCode: "",
+    classTitle: "",
     description: "",
     courseContentUrl: "",
     startDate: "",
@@ -87,6 +88,7 @@ export default function Classes() {
     setForm({
       subjectCode: "",
       description: "",
+      classTitle: "",
       courseContentUrl: "",
       startDate: "",
       noOfSessions: "",
@@ -179,6 +181,7 @@ export default function Classes() {
           <thead className="bg-blue-100 text-blue-800 text-left">
             <tr>
               <th>Subject</th>
+              <th>Title</th>
               <th>Description</th>
               <th>Start Date</th>
               <th>Start Time</th>
@@ -194,6 +197,7 @@ export default function Classes() {
             {classes.map((cls) => (
               <tr key={cls.id}>
                 <td>{subjects.find((s) => s.code === cls.subjectCode)?.name || "-"}</td>
+                <td>{cls.classTitle}</td>
                 <td>{cls.description}</td>
                 <td>{cls.startDate}</td>
                 <td>{cls.startTime}</td>
@@ -270,7 +274,14 @@ export default function Classes() {
                 </option>
               ))}
             </select>
-
+            <input
+              className="input"
+              placeholder="Title"
+              value={form.classTitle}
+              onChange={(e) =>
+                setForm({ ...form, classTitle: e.target.value })
+              }
+            />
             <input
               className="input"
               placeholder="Description"
