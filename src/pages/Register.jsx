@@ -13,7 +13,7 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
+    <div className="flex justify-center px-4 pt-6">
       <div className="w-full max-w-md bg-white shadow-lg rounded-lg p-6">
         <h3 className="text-xl font-semibold mb-6 text-center">
           Tutor Registration
