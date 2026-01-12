@@ -13,8 +13,8 @@ export default function Register() {
   };
 
   return (
-    <div className="flex flex-col justify-center h-screen">
-      <h2 className="text-xl mb-4">Tutor Register</h2>
+    <div className="max-w-md mx-auto mt-12 card">
+      <h3 className="text-xl font-semibold mb-4">Tutor Register</h3>
       <form onSubmit={handleSubmit} className="bg-white p-6 shadow rounded w-96">
         <input type="text" placeholder="User Name"
           value={form.name}

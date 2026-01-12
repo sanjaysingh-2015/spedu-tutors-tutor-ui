@@ -1,2 +1,4 @@
 HELP.md
 node_modules/
+# N-Mod EXT ignore file
+.nmodignore
